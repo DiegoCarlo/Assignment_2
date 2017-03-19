@@ -32,7 +32,10 @@ revolutions = [0, 87.969, 224.700, 365.256, 27.321, 686.96, 4333.286, 10756.199,
 ### The durations of the bodies of rotation on its own axis (x hours) ###
 rotations = [654.6, 1403.667, 5816.083, 23.934, 653.930, 24.555, 9.897, 10.755, 17.192, 16.11] 
 
+inclination = [0, 0.01, 177.36, 23.43, 1.54, 25.19, 3.13, 26.73, 97.77, 28.32]
 #rotations = [26.5, 58.65, -243.01, 0.997, 27.32, 1.026, 0.41, 0.426, -0.746, 0.8]
+
+allClasses = ["star", "planet", "planet", "planet", "satellite", "planet", "planet", "planet", "planet", "planet"]
 
 allTexture = ["00_Sole.jpg", "01_Mercurio.jpg", "02_Venere.jpg", "03_Terra.jpg", \
 "03_01_Luna_2.jpg", "04_Marte.jpg", "05_Giove.jpg", "06_Saturno.jpg", "07_Urano.jpg", "08_Nettuno.jpg"]
@@ -149,9 +152,10 @@ class Camera(object):
 	texture, posizione, rotazione, velocita ecc.. """
 class celestialObject(object):
 
-	def __init__ (self, name, orientation, radius, rotation, revolution, orbit, pathImage):
+	def __init__ (self, name, classes, orientation, radius, rotation, revolution, orbit, pathImage):
 
 		self.name = name
+		self.classes = classes
 		self.orientation = orientation
 		self.radius = radius
 		self.rotation =  rotation
@@ -170,8 +174,10 @@ def creaCorpiCelesti2():
 	coeffDiam = 0.3
 	coeffDist = 7
 	gapDist = 0
-	coeffRevo = .41
-	coeffRot = 1
+	coeffRevo = .35
+	coeffRot = 0.5
+	coeffRevoSatellites = 10
+
 	celestialObjects = []
 	for i in range(0, len(diameters)):
 
@@ -190,11 +196,13 @@ def creaCorpiCelesti2():
 		if revolutions[i] != 0:
 			revo = 1/log(revolutions[i], 10) * coeffRevo
 
+		if allClasses[i] == "satellite":
+			revo = revo * coeffRevoSatellites
 
 		revolution = Revolution(dist, [0,1,0],randint(0,360),revo)
 		radius = log(diameters[i]/2, 10) * coeffDiam
 		#print revo
-		celestialObjects.append(celestialObject(allTexture[i], [0, 0, 0], radius, rotation, revolution, False, allTexture[i]))
+		celestialObjects.append(celestialObject(allTexture[i], allClasses[i], [0, 0, inclination[i]], radius, rotation, revolution, False, allTexture[i]))
 
 	celestialObjects[4].revolution.revolution = celestialObjects[3].revolution
 
@@ -203,7 +211,7 @@ def creaCorpiCelesti2():
 
 	rotation = Rotation(0, -(360/rotations[0])*coeffRevo*0.1)
 	revolution = Revolution(0, [0,0,0],0,0)
-	celestialObjects.append(celestialObject("sky",  [0, 0, 45],\
+	celestialObjects.append(celestialObject("sky", "environment",  [0, 0, 45],\
 		maxViewDistance, rotation, revolution, False, "The_Milky_Way.jpg"))
 
 def createAsteroids(coeffDist,gapDist, coeffRevo):
@@ -221,7 +229,7 @@ def createAsteroids(coeffDist,gapDist, coeffRevo):
 		gapRevolution = maxRevolution - minRevolution
 		revo = rand * gapRevolution + minRevolution
 		revolution = Revolution(dist, [0,1,0],randint(0,360), 1/log(revo, 10) * coeffRevo)
-		celestialObjects.append(celestialObject("Asteroid",[0,0,0], randint(10,40)*0.001, rotation, revolution, False, "04.5_Asteroid_2.jpg")) 
+		celestialObjects.append(celestialObject("Asteroid","asteroid", [0,0,0], randint(10,40)*0.001, rotation, revolution, False, "04.5_Asteroid_2.jpg")) 
 
 def creaCorpiCelesti(FromThe):
     global celestialObjects, maxViewDistance
@@ -291,8 +299,10 @@ def creaCorpiCelesti(FromThe):
     celestialObjects.append(celestialObject("sky", maxViewDistance, rotation, revolution, "skyMap.jpg"))
 
 def initData():
-    global quadric, camera, celestialObjects
+    global quadric, camera, celestialObjects, windowX, windowY
     camera = Camera()
+    
+    #gluPerspective(60.0, float(windowX)/float(windowY), 0, 60.0)
     #creaCorpiCelesti()
     creaCorpiCelesti2()
     glEnable(GL_DEPTH_TEST)
@@ -340,7 +350,6 @@ def initTexture2(pathImage):
 
     glBindTexture( GL_TEXTURE_2D, texture )
    
-
     gluBuild2DMipmaps ( GL_TEXTURE_2D, GL_RGBA, ix, iy, GL_RGBA, GL_UNSIGNED_BYTE, image_bytes )
     gluQuadricTexture(quadric, 1)
     return texture
@@ -474,15 +483,16 @@ def mouseMotion(x, y):
         
         camera.tempIncrementOrientation(X, Y)
 
-def resizeScene(Width, Height):
-    if Height == 0:                        # Prevent A Divide By Zero If The Window Is Too Small 
-        Height = 1
+def resizeScene(windowX, windowY):
+	global maxViewDistance
+	if windowY == 0:                        # Prevent A Divide By Zero If The Window Is Too Small 
+		windowY = 1
 
-    glViewport(0, 0, Width, Height)        # Reset The Current Viewport And Perspective Transformation
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluPerspective(45.0, float(Width)/float(Height), 0.1, 100.0)
-    glMatrixMode(GL_MODELVIEW)
+	glViewport(0, 0, windowX, windowY)        # Reset The Current Viewport And Perspective Transformation
+	glMatrixMode(GL_PROJECTION)
+	glLoadIdentity()
+	gluPerspective(60.0, float(windowX)/float(windowY), 0.1, maxViewDistance*2)
+	glMatrixMode(GL_MODELVIEW)
 
 def main():
 	global windowX, windowY
@@ -490,7 +500,7 @@ def main():
 
 	glutInitWindowSize(windowX, windowY) # imposta le dimensioni della finestra
 	glutInitWindowPosition(100, 100) # coordinate di posizione della finestra
-	glutCreateWindow("0to100.py") # creazione e titolo della finestra
+	glutCreateWindow("Solar System.py") # creazione e titolo della finestra
 
 	glutKeyboardFunc(keyPressed) # permette di chiamare la funzione keyPressed quando un tasto viene premuto
 
