@@ -4,6 +4,7 @@ from OpenGL.GLU import *
 from PIL.Image import *
 from math import *
 from random import randint
+from random import random
 
 windowX = 1200
 windowY = 800
@@ -21,10 +22,17 @@ mousePrevState = 1
 
 mouseTracking = False
 
-distanceSun = [0.00, 57.90, 108.20, 149.60, 0.384, 227.90, 778.30, 1427.00, 2871.00, 4497.10]
-diameters = [1392.000, 4.878, 12.102, 12.756, 3.476, 6.786, 142.984, 120.536, 51.118, 49.528]
-revolutions = [0, 47.9, 35.0, 29.8, 1022, 24.1, 13.1, 9.6, 6.8, 5.4]
-rotations = [26.5, 58.65, -243.01, 0.997, 27.32, 1.026, 0.41, 0.426, -0.746, 0.8]
+### The numerical values shown here have been taken from wikipedia ###
+### These are the distances of the main objects from their center of revolution  (x * 10^9 meters) ###
+revolutionRadius = [0.00, 57.90, 108.20, 149.60, 0.384, 227.90, 778.30, 1427.00, 2871.00, 4497.10]
+### The diameters of the main objects (x * 10^6 meters) ###
+diameters = [1391.400, 4.878, 12.102, 12.756, 3.476, 6.786, 142.984, 120.536, 51.118, 49.528]
+### The durations of the revolution of the main objects (x day) ###
+revolutions = [0, 87.969, 224.700, 365.256, 27.321, 686.96, 4333.286, 10756.199, 30707.043, 60223.352]
+### The durations of the bodies of rotation on its own axis (x hours) ###
+rotations = [654.6, 1403.667, 5816.083, 23.934, 653.930, 24.555, 9.897, 10.755, 17.192, 16.11] 
+
+#rotations = [26.5, 58.65, -243.01, 0.997, 27.32, 1.026, 0.41, 0.426, -0.746, 0.8]
 
 allTexture = ["00_Sole.jpg", "01_Mercurio.jpg", "02_Venere.jpg", "03_Terra.jpg", \
 "03_01_Luna_2.jpg", "04_Marte.jpg", "05_Giove.jpg", "06_Saturno.jpg", "07_Urano.jpg", "08_Nettuno.jpg"]
@@ -65,7 +73,7 @@ class Camera(object):
     	global maxViewDistance
         self.x = 0
         self.y = 0
-        self.z = maxViewDistance/2 # moving forwars -Z moving backward +Z
+        self.z = maxViewDistance*.75 # moving forwars -Z moving backward +Z
 
         self.xLook = 0
         self.yLook = 0
@@ -104,6 +112,7 @@ class Camera(object):
         gluLookAt(self.x, self.y, self.z, \
             self.xLook, self.yLook, self.zLook,\
             self.xRot, self.yRot, self.zRot)
+
         ipsillon = self.orbitY + self.tempOrbitY
         segno = 1
         if ipsillon < -90:
@@ -166,33 +175,33 @@ def creaCorpiCelesti2():
 	celestialObjects = []
 	for i in range(0, len(diameters)):
 
-		rot = 1/rotations[i]
+		rot = 360/rotations[i]
 		rotation = Rotation(0, rot * coeffRot)
 
 		dist = 0
-		if distanceSun[i] != 0:
-			dist = (log(distanceSun[i], 10) * coeffDist) - gapDist
-			#print log(distanceSun[i], 10)
+		if revolutionRadius[i] != 0:
+			dist = (log(revolutionRadius[i], 10) * coeffDist) - gapDist
+			#print log(revolutionRadius[i], 10)
 
 		if i == 4:
 			dist = 1
 
 		revo = 0
 		if revolutions[i] != 0:
-			revo = log(revolutions[i], 10) * coeffRevo
+			revo = 1/log(revolutions[i], 10) * coeffRevo
 
 
 		revolution = Revolution(dist, [0,1,0],randint(0,360),revo)
-		diam = log(diameters[i], 10) * coeffDiam
+		radius = log(diameters[i]/2, 10) * coeffDiam
 		#print revo
-		celestialObjects.append(celestialObject(allTexture[i], [0, 0, 0], diam, rotation, revolution, False, allTexture[i]))
+		celestialObjects.append(celestialObject(allTexture[i], [0, 0, 0], radius, rotation, revolution, False, allTexture[i]))
 
 	celestialObjects[4].revolution.revolution = celestialObjects[3].revolution
 
 	createAsteroids(coeffDist, gapDist, coeffRevo)
 	#celestial	
 
-	rotation = Rotation(0, -(1/rotations[0])*coeffRevo)
+	rotation = Rotation(0, -(360/rotations[0])*coeffRevo*0.1)
 	revolution = Revolution(0, [0,0,0],0,0)
 	celestialObjects.append(celestialObject("sky",  [0, 0, 45],\
 		maxViewDistance, rotation, revolution, False, "The_Milky_Way.jpg"))
@@ -200,16 +209,22 @@ def creaCorpiCelesti2():
 def createAsteroids(coeffDist,gapDist, coeffRevo):
 	for i in range(0, 50):
 
-		rotation = Rotation(0, 1)
-		dist = randint(280, 600)
+		rotation = Rotation(0, 0)
+		rand = random()
+		minDistance = revolutionRadius[5]
+		maxDistance = revolutionRadius[6]
+		gapDistance = maxDistance - minDistance
+		dist = rand * gapDistance + minDistance
 		dist = (log(dist, 10) * coeffDist) - gapDist
-		revolution = Revolution(dist, [0,1,0],randint(0,360),0.59 * coeffRevo)
-		celestialObjects.append(celestialObject("sat",[0,0,0], randint(0,50)*0.001, rotation, revolution, False, "04.5_Asteroid_2.jpg")) 
+		minRevolution = revolutions[5]
+		maxRevolution = revolutions[6]
+		gapRevolution = maxRevolution - minRevolution
+		revo = rand * gapRevolution + minRevolution
+		revolution = Revolution(dist, [0,1,0],randint(0,360), 1/log(revo, 10) * coeffRevo)
+		celestialObjects.append(celestialObject("Asteroid",[0,0,0], randint(10,40)*0.001, rotation, revolution, False, "04.5_Asteroid_2.jpg")) 
 
-def creaCorpiCelesti():
+def creaCorpiCelesti(FromThe):
     global celestialObjects, maxViewDistance
-
-    
 
     timeCoeff = 1
 
