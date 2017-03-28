@@ -21,7 +21,6 @@ mouseTracking = False# ready or not to register movements
 maxViewDistance = 50
 minViewDistance = 2.5
 
-
 ### all object ###
 listSpaceObjects = None
 
@@ -30,7 +29,6 @@ quadric = None
 camera = None
 
 showOrbit = False
-
 
 ### The numerical values shown here have been taken from wikipedia ###
 ### These are the distances of the main objects from their center of revolution  (x * 10^9 meters) ###
@@ -54,13 +52,13 @@ allTexture = ["00_Sole.jpg", "01_Mercurio.jpg", "02_Venere.jpg", "03_Terra.jpg",
 textureSaturnRing = None
 
 class Camera(object):
-
+	''' this class manage the view. x, y and z are not strictly paid to opengl axes  '''
 	def __init__(self):
 		global maxViewDistance
 
 		self.z = maxViewDistance * 0.75 # moving forwards -z moving backwards + z
 
-		self.xOrbit = 0
+		self.xOrbit = 0 
 		self.yOrbit = 5
 
 		self.xOrbitTemp = 0
@@ -69,15 +67,16 @@ class Camera(object):
 		self.update()
 
 	def zoom(self, z):
+		''' zoom increment the distance from 0,0,0 '''
 		global maxViewDistance, minViewDistance
 
 		temp = self.z + z
 		if temp > minViewDistance and temp < maxViewDistance:
 			self.z = temp
 
-	''' x,y are mouse coordinates, not scene axis '''
 	def update(self):
-
+		''' 
+		'''
 		gluLookAt(0, 0, self.z, \
 			0, 0, 0, \
 			0, 1, 0)
@@ -87,15 +86,18 @@ class Camera(object):
 		angleX = radians((self.xOrbit + self.xOrbitTemp))
 		xComp = cos(angleX)
 		zComp = sin(angleX)
+
 		glRotate(self.yOrbit + self.yOrbitTemp, xComp, 0, zComp)
 
 	def incrementOrientation(self):
+		''' the function must be called when the mouse was released '''
 		self.xOrbit += self.xOrbitTemp
 		self.yOrbit += self.yOrbitTemp
 		self.xOrbitTemp = 0
 		self.yOrbitTemp = 0
 
 	def tempIncrementOrientation(self, x, y):
+		''' it must be called when the mouse drag the view '''
 		self.xOrbitTemp = x
 		self.yOrbitTemp = y
 
@@ -299,9 +301,7 @@ def revolutionRoot(revolution):
 
 def drawSpaceObject(item):
 	global quadric, textureSaturnRing
-
-	item.update() ## todo, questa va messa in un thread a parte
-
+	item.update()
 	glPushMatrix()
 
 	if item.classes == "planet" or item.classes == "environment" or item.classes == "asteroid":
@@ -432,7 +432,7 @@ def mouseMotion(x,y):
 		camera.tempIncrementOrientation(xGap, yGap)
 
 def main():
-	global windowX, windowY
+	global windowX, windowY, physicsThread
 
 	glutInit()
 	glutInitWindowSize(windowX, windowY)
@@ -444,7 +444,6 @@ def main():
 
 	glutDisplayFunc(drawScene)
 	glutIdleFunc(drawScene)
-
 	glutKeyboardFunc(keyPressed)
 
 	glutMouseFunc(mousePressed)
