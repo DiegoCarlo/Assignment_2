@@ -14,12 +14,12 @@ windowY = 400
 mouseX = 0
 mouseY = 0
 mousePrevStateRight = 1 # button pressed or not
+mousePrevStateMiddle = 1
 mousePrevStateLeft = 1
 mouseTracking = False# ready or not to register movements
 
 ### view parameters ###
-maxViewDistance = 50
-minViewDistance = 2.5
+maxViewDistance = 150
 
 ### all object ###
 listSpaceObjects = None
@@ -27,6 +27,8 @@ listSpaceObjects = None
 quadric = None
 
 camera = None
+
+update = True # run simulation
 
 showOrbit = False
 
@@ -54,9 +56,11 @@ textureSaturnRing = None
 class Camera(object):
 	''' this class manage the view. x, y and z are not strictly paid to opengl axes  '''
 	def __init__(self):
-		global maxViewDistance
 
-		self.z = maxViewDistance * 0.75 # moving forwards -z moving backwards + z
+		self.maxDistance = 50
+		self.minDistance = 2.5
+
+		self.z = self.maxDistance * 0.75 # moving forwards -z moving backwards + z
 
 		self.xOrbit = 0 
 		self.yOrbit = 5
@@ -64,14 +68,15 @@ class Camera(object):
 		self.xOrbitTemp = 0
 		self.yOrbitTemp = 0
 
+		
+
 		self.update()
 
 	def zoom(self, z):
 		''' zoom increment the distance from 0,0,0 '''
-		global maxViewDistance, minViewDistance
 
 		temp = self.z + z
-		if temp > minViewDistance and temp < maxViewDistance:
+		if temp > self.minDistance and temp < self.maxDistance:
 			self.z = temp
 
 	def update(self):
@@ -300,8 +305,11 @@ def revolutionRoot(revolution):
 	glRotate(-revolution.angPosition, axis[0], axis[1], axis[2])
 
 def drawSpaceObject(item):
-	global quadric, textureSaturnRing
-	item.update()
+	global quadric, textureSaturnRing, update
+	
+	if update == True:
+		item.update()
+	
 	glPushMatrix()
 
 	if item.classes == "planet" or item.classes == "environment" or item.classes == "asteroid":
@@ -330,9 +338,11 @@ def drawSpaceObject(item):
 	glRotatef(item.rotation.angPosition, .0, .0, 1)
 	
 	if item.classes == "environment":
+		glDepthMask(GL_FALSE)
 		gluQuadricOrientation(quadric, GLU_INSIDE)
 		gluSphere(quadric, item.radius, item.subdivision, item.subdivision)
 		gluQuadricOrientation(quadric, GLU_OUTSIDE)
+		glDepthMask(GL_TRUE)
 	else:
 		gluSphere(quadric, item.radius, item.subdivision, item.subdivision)
 
@@ -373,7 +383,6 @@ def drawScene():
 	for i in listSpaceObjects:
 		drawSpaceObject(i)
 
-
 	glutSwapBuffers()
 
 def resizeScene(width, height):
@@ -392,7 +401,8 @@ def keyPressed(key, x, y):
 		sys.exit()
 
 def mousePressed(button, state, x, y):
-	global mousePrevStateRight, mousePrevStateLeft, mouseTracking, mouseX, mouseY, camera, showOrbit
+	global mousePrevStateRight, mousePrevStateMiddle, mousePrevStateLeft, mouseTracking, mouseX, mouseY, camera, showOrbit, update
+	
 	if button == 3:
 		camera.zoom(-0.5) # forwards 
 	elif button == 4:
@@ -417,11 +427,19 @@ def mousePressed(button, state, x, y):
 
 	if button == 0:
 		if state == 0 and mousePrevStateLeft == 1:
+			if update == True:
+				update = False
+			else:
+				update = True
+	mousePrevStateLeft = state
+
+	if button == 1:
+		if state == 0 and mousePrevStateMiddle == 1:
 			if showOrbit == True:
 				showOrbit = False
 			else:
 				showOrbit = True
-	mousePrevStateLeft = state
+	mousePrevStateMiddle = state
 
 def mouseMotion(x,y):
 	global mouseX, mouseY, camera, mouseTracking
